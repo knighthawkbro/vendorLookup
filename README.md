@@ -16,4 +16,4 @@ The program reads the file and fetches vendor information from [MA:CV:en:do:rs.c
 - Add flags for file output options
 - Add a verbose option instead of outputting to file
 - Add a license to it
-- 
+- Change the name to something more descriptive
