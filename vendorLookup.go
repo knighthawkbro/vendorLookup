@@ -2,46 +2,80 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
-	"mac/lib"
 	"os"
+	"regexp"
+	"strings"
+	"vendorLookup/lib"
+
+	"github.com/atotto/clipboard"
 )
 
 func main() {
-	args := os.Args
-	usage := "usage: mac Filename"
+	var usage = `
+VendorLookup takes in a file of MAC addresses in any format separated by newlines and spits out all the vendor specified for those mac addresses.
 
-	if len(args) == 1 {
-		fmt.Printf("No file specified\n\n%v\n", usage)
-		return
-	} else if len(args) > 2 {
-		fmt.Printf("Too many arguments\n\n%v\n", usage)
-		return
-	} else if args[1] == "-h" || args[1] == "--help" {
-		fmt.Printf("%v\n", usage)
-		return
+Usage:
+	vendorLookup [--copy] <FileName>
+
+Examples:
+	# Look up a bulk list of MAC Addresses
+	vendorLookup mac.txt
+
+`
+	macReg := "(([0-9A-Fa-f]{2}[-:]){5}[0-9A-Fa-f]{2})|(([0-9A-Fa-f]{4}.){2}[0-9A-Fa-f]{4})"
+	copy := flag.Bool("copy", false, "Copies a string of MAC addresses from the Clipboard.")
+
+	flag.Usage = func() {
+		fmt.Printf(usage)
 	}
-
-	file, err := os.Open(args[1])
-	lib.CheckErr("File not Found", err)
-
-	out, err := os.Create("out.txt")
-	lib.CheckErr("Couldn't create output file", err)
-
-	defer file.Close()
-	defer out.Close()
+	flag.Parse()
 
 	var macs []lib.Mac
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		x := lib.Mac{
-			Address: scanner.Text(),
+	if *copy {
+		text, err := clipboard.ReadAll()
+		lib.CheckErr("Nothing in clipboard", err)
+		scanner := bufio.NewScanner(strings.NewReader(text))
+		for scanner.Scan() {
+			match, _ := regexp.MatchString(macReg, scanner.Text())
+			var x lib.Mac
+			if match {
+				x = lib.Mac{
+					Address: scanner.Text(),
+				}
+			} else {
+				fmt.Println("Not A MAC")
+				os.Exit(1)
+			}
+
+			macs = append(macs, x)
 		}
-		macs = append(macs, x)
+	} else {
+		if flag.NArg() == 0 {
+			flag.Usage()
+			os.Exit(1)
+		}
+
+		file := flag.Arg(0)
+		f, err := os.Open(file)
+		lib.CheckErr("File not Found", err)
+		defer f.Close()
+
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			x := lib.Mac{
+				Address: scanner.Text(),
+			}
+			macs = append(macs, x)
+		}
+		lib.CheckErr("Couldn't Create Scanner object", scanner.Err())
 	}
 
-	lib.CheckErr("Couldn't Create Scanner object", scanner.Err())
+	out, err := os.Create("out.txt")
+	lib.CheckErr("Couldn't create output file", err)
+	defer out.Close()
 
 	w := bufio.NewWriter(out)
 
