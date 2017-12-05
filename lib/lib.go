@@ -3,9 +3,9 @@ package lib
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
+	"os"
 )
 
 // Mac struct is used to store useful data about MAC addresses
@@ -16,7 +16,8 @@ type Mac struct {
 // CheckErr is a re-usable function for checking errors
 func CheckErr(msg string, e error) {
 	if e != nil {
-		log.Fatalf("%v: %v", msg, e)
+		fmt.Printf("%v: %v\n", msg, e)
+		os.Exit(1)
 	}
 }
 
